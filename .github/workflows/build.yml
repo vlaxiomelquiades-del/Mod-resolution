@@ -1,0 +1,56 @@
+name: Build ResScale (ABI-safe)
+
+on:
+  workflow_dispatch:
+    inputs:
+      preloader_ref:
+        description: 'Tag/branch/commit do preloader-android usado para compilar'
+        required: true
+        default: 'main'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+          link-to-sdk: true
+
+      - name: Configure
+        env:
+          PRELOADER_REF: ${{ inputs.preloader_ref }}
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-28 \
+            -DPRELOADER_ANDROID_REF="$PRELOADER_REF" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package mod folder
+        run: |
+          rm -rf dist
+          mkdir -p dist/resscale
+          cp manifest.json dist/resscale/
+          cp build/libresscale.so dist/resscale/
+          cd dist && zip -r resscale.levipack resscale
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: resscale-arm64-v8a
+          path: |
+            dist/resscale/
+            dist/resscale.levipack
