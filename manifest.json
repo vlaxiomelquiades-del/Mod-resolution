@@ -1,0 +1,8 @@
+{
+  "type": "preload-native",
+  "name": "ResScale",
+  "author": "DarkKdevon",
+  "version": "1.1.0",
+  "entry": "libresscale.so",
+  "minecraft_versions": []
+}
